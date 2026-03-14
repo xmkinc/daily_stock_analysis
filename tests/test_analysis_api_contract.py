@@ -44,6 +44,32 @@ class AnalysisApiContractTestCase(unittest.TestCase):
             ReportType.FULL,
         )
 
+    def test_report_type_full_is_preserved_in_response_metadata(self) -> None:
+        service = AnalysisService()
+        pipeline_instance = MagicMock()
+        pipeline_instance.process_single_stock.return_value = SimpleNamespace(
+            code="600519",
+            name="贵州茅台",
+            current_price=1234.56,
+            change_pct=1.23,
+            model_used="test-model",
+            analysis_summary="summary",
+            operation_advice="hold",
+            trend_prediction="up",
+            sentiment_score=80,
+            news_summary="news",
+            technical_analysis="tech",
+            fundamental_analysis="fundamental",
+            risk_warning="risk",
+            get_sniper_points=lambda: {},
+        )
+
+        with patch("src.config.get_config", return_value=SimpleNamespace()), \
+             patch("src.core.pipeline.StockAnalysisPipeline", return_value=pipeline_instance):
+            result = service.analyze_stock("600519", report_type="full", query_id="q1", send_notification=False)
+
+        self.assertEqual(result["report"]["meta"]["report_type"], "full")
+
     def test_openapi_declares_single_and_batch_async_202_payloads(self) -> None:
         if create_app is None:
             self.skipTest("fastapi is not installed in this test environment")
@@ -151,6 +177,17 @@ class BatchTaskQueueContractTestCase(unittest.TestCase):
         self.assertEqual([task.stock_code for task in accepted], ["600519"])
         self.assertEqual(duplicates, [])
         self.assertEqual(sorted(task.stock_code for task in queue._tasks.values()), ["600519"])
+
+    def test_submit_task_rejects_blank_stock_code(self) -> None:
+        queue = AnalysisTaskQueue(max_workers=1)
+        queue._executor = type("ExecutorStub", (), {"submit": lambda self, *args, **kwargs: Future()})()
+
+        with self.assertRaisesRegex(ValueError, "股票代码不能为空或仅包含空白字符"):
+            queue.submit_task("   ", report_type="detailed")
+
+        self.assertEqual(queue._tasks, {})
+        self.assertEqual(queue._analyzing_stocks, {})
+        self.assertEqual(queue._futures, {})
 
     def test_batch_submit_broadcasts_task_created_while_queue_lock_is_held(self) -> None:
         queue = AnalysisTaskQueue(max_workers=1)

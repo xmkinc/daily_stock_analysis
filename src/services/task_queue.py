@@ -217,6 +217,10 @@ class AnalysisTaskQueue:
         Raises:
             DuplicateTaskError: 股票正在分析中
         """
+        stock_code = canonical_stock_code(stock_code)
+        if not stock_code:
+            raise ValueError("股票代码不能为空或仅包含空白字符")
+
         accepted, duplicates = self.submit_tasks_batch(
             [stock_code],
             stock_name=stock_name,
