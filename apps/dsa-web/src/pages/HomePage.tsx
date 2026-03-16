@@ -9,6 +9,7 @@ import { analysisApi, DuplicateTaskError } from '../api/analysis';
 import { validateStockCode } from '../utils/validation';
 import { getRecentStartDate, getTodayInShanghai } from '../utils/format';
 import { useAnalysisStore } from '../stores/analysisStore';
+import { QuickModelSwitcher } from '../components/ModelSwitcher';
 import { ReportSummary, ReportMarkdown } from '../components/report';
 import { HistoryList } from '../components/history';
 import { TaskPanel } from '../components/tasks';
@@ -439,6 +440,7 @@ const HomePage: React.FC = () => {
               <p className="absolute -bottom-4 left-0 text-xs text-warning">{duplicateError}</p>
             )}
           </div>
+          <QuickModelSwitcher />
           <button
             type="button"
             onClick={handleAnalyze}
